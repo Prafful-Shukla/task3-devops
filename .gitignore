@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.env
+aws/
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+awscliv2.zip
+*.pem

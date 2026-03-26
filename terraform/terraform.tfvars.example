@@ -1,0 +1,4 @@
+# Example values - do not commit real secrets
+# Use a strong password in your own terraform.tfvars
+
+db_password = "ChangeMeStrongPassword123!"
