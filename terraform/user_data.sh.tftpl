@@ -1,0 +1,20 @@
+#!/bin/bash
+set -euxo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y docker.io docker-compose git curl snapd
+
+systemctl enable --now docker
+
+if snap list amazon-ssm-agent >/dev/null 2>&1; then
+  snap start amazon-ssm-agent || true
+else
+  snap install amazon-ssm-agent --classic || true
+  snap start amazon-ssm-agent || true
+fi
+
+systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+
+mkdir -p /opt/task3

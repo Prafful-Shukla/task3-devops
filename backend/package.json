@@ -1,8 +1,10 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "check": "node --check app.js && node --check routes/api.js && node --check config/db.js && node --check config/secrets.js && node --check services/dbService.js"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1016.0",

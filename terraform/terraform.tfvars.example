@@ -1,4 +1,8 @@
 # Example values - do not commit real secrets
-# Use a strong password in your own terraform.tfvars
+# The pipeline can auto-generate the DB password, so most teams only set region or secret_name.
 
-db_password = "ChangeMeStrongPassword123!"
+# aws_region  = "us-east-1"
+# secret_name = "task3/rds/postgres"
+
+# Optional override if you do not want Terraform to auto-generate the DB password:
+# db_password = "ChangeMeStrongPassword123!"

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Validate backend source
+        run: npm --prefix backend run check
+
+      - name: Prepare compose environment
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose
+        run: |
+          if docker compose version >/dev/null 2>&1; then
+            docker compose config
+          else
+            docker-compose config
+          fi
+
+      - name: Build backend image
+        run: docker build -t task3-backend-ci ./backend
+
+      - name: Build frontend image
+        run: docker build -t task3-frontend-ci ./frontend
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Initialize Terraform
+        run: terraform -chdir=terraform init -backend=false -input=false
+
+      - name: Validate Terraform
+        run: terraform -chdir=terraform validate

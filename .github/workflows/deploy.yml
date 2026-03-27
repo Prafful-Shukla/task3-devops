@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: task3-production
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+  APP_REPOSITORY_URL: ${{ vars.APP_REPOSITORY_URL }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Validate backend and compose files
+        run: |
+          npm ci --prefix backend
+          npm --prefix backend run check
+          cp .env.example .env
+          if docker compose version >/dev/null 2>&1; then
+            docker compose config
+          else
+            docker-compose config
+          fi
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validate Terraform
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: |
+          terraform -chdir=terraform fmt -check -recursive
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-actions-task3-deploy
+
+      - name: Initialize Terraform remote state
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: |
+          STATE_KEY="${TF_STATE_KEY:-task3/terraform.tfstate}"
+          terraform -chdir=terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=${STATE_KEY}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}"
+
+      - name: Apply infrastructure
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: terraform -chdir=terraform apply -auto-approve -input=false
+
+      - name: Capture Terraform outputs
+        run: |
+          echo "INSTANCE_ID=$(terraform -chdir=terraform output -raw ec2_instance_id)" >> "$GITHUB_ENV"
+          echo "SECRET_ID=$(terraform -chdir=terraform output -raw rds_secret_name)" >> "$GITHUB_ENV"
+          echo "APP_PUBLIC_IP=$(terraform -chdir=terraform output -raw ec2_public_ip)" >> "$GITHUB_ENV"
+
+      - name: Wait for AWS Systems Manager
+        run: ./scripts/wait-for-ssm.sh "$INSTANCE_ID" "$AWS_REGION"
+
+      - name: Deploy application on EC2
+        run: ./scripts/deploy-via-ssm.sh
+
+      - name: Verify public endpoint
+        run: curl -fsS "http://${APP_PUBLIC_IP}/"

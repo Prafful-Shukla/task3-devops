@@ -5,8 +5,14 @@ resource "aws_instance" "app" {
   subnet_id = aws_subnet.public.id
 
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.app.name
+  user_data              = templatefile("${path.module}/user_data.sh.tftpl", {})
 
-  key_name = var.key_name
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
 
   tags = {
     Name = "task3-ec2"
