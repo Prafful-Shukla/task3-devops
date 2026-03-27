@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_REGION: us-east-1
   TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
   APP_REPOSITORY_URL: ${{ vars.APP_REPOSITORY_URL }}
 
