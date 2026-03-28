@@ -33,7 +33,7 @@ region = os.environ["AWS_REGION"]
 secret_id = os.environ["SECRET_ID"]
 
 commands = [
-    "set -euo pipefail",
+    "set -eu",
     f"APP_DIR={shlex.quote(app_dir)}",
     f"REPO_URL={shlex.quote(repo_url)}",
     f"BRANCH={shlex.quote(branch)}",
