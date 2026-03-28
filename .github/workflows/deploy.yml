@@ -91,10 +91,10 @@ jobs:
           echo "APP_PUBLIC_IP=$(terraform -chdir=terraform output -raw ec2_public_ip)" >> "$GITHUB_ENV"
 
       - name: Wait for AWS Systems Manager
-        run: ./scripts/wait-for-ssm.sh "$INSTANCE_ID" "$AWS_REGION"
+        run: bash ./scripts/wait-for-ssm.sh "$INSTANCE_ID" "$AWS_REGION"
 
       - name: Deploy application on EC2
-        run: ./scripts/deploy-via-ssm.sh
+        run: bash ./scripts/deploy-via-ssm.sh
 
       - name: Verify public endpoint
         run: curl -fsS "http://${APP_PUBLIC_IP}/"
