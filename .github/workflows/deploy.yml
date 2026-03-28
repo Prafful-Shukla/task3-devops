@@ -17,6 +17,8 @@ concurrency:
 env:
   AWS_REGION: us-east-1
   TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_LOCK_TABLE: ${{ vars.TF_STATE_LOCK_TABLE }}
   APP_REPOSITORY_URL: ${{ vars.APP_REPOSITORY_URL }}
 
 jobs:
@@ -68,12 +70,14 @@ jobs:
         env:
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
         run: |
-          STATE_KEY="${TF_STATE_KEY:-task3/terraform.tfstate}"
+          STATE_BUCKET="$(printf '%s' "$TF_STATE_BUCKET" | tr -d '\r\n')"
+          STATE_LOCK_TABLE="$(printf '%s' "$TF_STATE_LOCK_TABLE" | tr -d '\r\n')"
+          STATE_KEY="$(printf '%s' "${TF_STATE_KEY:-task3/terraform.tfstate}" | tr -d '\r\n')"
           terraform -chdir=terraform init -input=false \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="bucket=${STATE_BUCKET}" \
             -backend-config="key=${STATE_KEY}" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}"
+            -backend-config="dynamodb_table=${STATE_LOCK_TABLE}"
 
       - name: Apply infrastructure
         env:
